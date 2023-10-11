@@ -1,0 +1,62 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: EC2 instance stack with CloudFormation
+
+Parameters:
+  InstanceName:
+    Type: String
+    Default: 'EC2Test'
+  InstType:
+    Type: String
+    Default: 't2.micro'
+  AMIid: 
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+  DiskSize:
+    Type: String
+    Default: '8'
+  Subnet:
+    Type: AWS::EC2::Subnet::Id
+  VPC:
+    Type: AWS::EC2::VPC::Id
+
+Resources:
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AMIid ####--- ImageID valid only in us-east-1 region
+      InstanceType: !Ref InstType
+      IamInstanceProfile: EC2Role
+      KeyName: lii_admin ####--- Change to use your key-pair name
+      SecurityGroupIds:
+        - !Ref EC2SecurityGroup
+      BlockDeviceMappings: 
+        - DeviceName: "/dev/xvda"
+          Ebs:
+            VolumeSize: !Ref DiskSize
+            VolumeType: 'gp3'
+            DeleteOnTermination: "true"
+      SubnetId: !Ref Subnet
+      Tags:
+        - Key: Name
+          Value: !Ref InstanceName
+
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Join ["-", [!Ref InstanceName, "sg"]]
+      GroupDescription: "EC2 Instance Security Group"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+          
+Outputs:
+  EC2Instance:
+    Description: Instance ID
+    Value: !Ref EC2Instance
